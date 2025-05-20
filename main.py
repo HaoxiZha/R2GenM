@@ -23,6 +23,15 @@ def parse_agrs():
     parser.add_argument('--threshold', type=int, default=3, help='the cut off frequency for the words.')
     parser.add_argument('--num_workers', type=int, default=2, help='the number of workers for dataloader.')
     parser.add_argument('--batch_size', type=int, default=16, help='the number of samples for a batch')
+    parser.add_argument('--use_note', action='store_true', help='use impression text as additional input')
+    parser.add_argument('--use_labels', action='store_true', help='use CheXpert labels for classification')
+    parser.add_argument('--text_encoder', type=str, default='bert-base-uncased', help='pretrained text encoder name')
+    parser.add_argument('--max_text_len', type=int, default=128, help='maximum length of note tokens')
+    parser.add_argument('--lambda_cls', type=float, default=1.0, help='loss weight for classification branch')
+    parser.add_argument('--use_adapter', action='store_true', help='enable adapter modules for few-shot tuning')
+    parser.add_argument('--adapter_dim', type=int, default=64, help='bottleneck dimension of adapters')
+    parser.add_argument('--use_prompt', action='store_true', help='enable learnable prompt tokens for few-shot tuning')
+    parser.add_argument('--prompt_len', type=int, default=5, help='number of prompt tokens')
 
     # Model settings (for visual extractor)
     parser.add_argument('--visual_extractor', type=str, default='resnet101', help='the visual extractor to be used.')
@@ -98,14 +107,19 @@ def main():
 
     # create tokenizer
     tokenizer = Tokenizer(args)
+    if args.use_note:
+        from transformers import AutoTokenizer
+        note_tokenizer = AutoTokenizer.from_pretrained(args.text_encoder)
+    else:
+        note_tokenizer = None
 
     # create data loader
-    train_dataloader = R2DataLoader(args, tokenizer, split='train', shuffle=True)
-    val_dataloader = R2DataLoader(args, tokenizer, split='val', shuffle=False)
-    test_dataloader = R2DataLoader(args, tokenizer, split='test', shuffle=False)
+    train_dataloader = R2DataLoader(args, tokenizer, split='train', shuffle=True, note_tokenizer=note_tokenizer)
+    val_dataloader = R2DataLoader(args, tokenizer, split='val', shuffle=False, note_tokenizer=note_tokenizer)
+    test_dataloader = R2DataLoader(args, tokenizer, split='test', shuffle=False, note_tokenizer=note_tokenizer)
 
     # build model architecture
-    model = R2GenModel(args, tokenizer)
+    model = R2GenModel(args, tokenizer, note_tokenizer=note_tokenizer)
 
     # get function handles of loss and metrics
     criterion = compute_loss

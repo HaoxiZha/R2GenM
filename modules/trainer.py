@@ -189,11 +189,17 @@ class Trainer(BaseTrainer):
 
         train_loss = 0
         self.model.train()
-        for batch_idx, (images_id, images, reports_ids, reports_masks) in enumerate(self.train_dataloader):
-            images, reports_ids, reports_masks = images.to(self.device), reports_ids.to(self.device), reports_masks.to(
-                self.device)
-            output = self.model(images, reports_ids, mode='train')
-            loss = self.criterion(output, reports_ids, reports_masks)
+        for batch_idx, batch in enumerate(self.train_dataloader):
+            images_id = batch[0]
+            images = batch[1].to(self.device)
+            reports_ids = batch[2].to(self.device)
+            reports_masks = batch[3].to(self.device)
+            note_ids = batch[4].to(self.device) if len(batch) > 4 else None
+            note_masks = batch[5].to(self.device) if len(batch) > 5 else None
+            labels = batch[6].to(self.device) if len(batch) > 6 else None
+
+            output, cls_logits = self.model(images, reports_ids, note_ids=note_ids, note_mask=note_masks, mode='train')
+            loss = self.criterion(output, reports_ids, reports_masks, cls_logits, labels, lambda_cls=self.args.lambda_cls)
             train_loss += loss.item()
             self.optimizer.zero_grad()
             loss.backward()
@@ -204,10 +210,13 @@ class Trainer(BaseTrainer):
         self.model.eval()
         with torch.no_grad():
             val_gts, val_res = [], []
-            for batch_idx, (images_id, images, reports_ids, reports_masks) in enumerate(self.val_dataloader):
-                images, reports_ids, reports_masks = images.to(self.device), reports_ids.to(
-                    self.device), reports_masks.to(self.device)
-                output = self.model(images, mode='sample')
+            for batch_idx, batch in enumerate(self.val_dataloader):
+                images = batch[1].to(self.device)
+                reports_ids = batch[2].to(self.device)
+                reports_masks = batch[3].to(self.device)
+                note_ids = batch[4].to(self.device) if len(batch) > 4 else None
+                note_masks = batch[5].to(self.device) if len(batch) > 5 else None
+                output, _ = self.model(images, reports_ids=None, note_ids=note_ids, note_mask=note_masks, mode='sample')
                 reports = self.model.tokenizer.decode_batch(output.cpu().numpy())
                 ground_truths = self.model.tokenizer.decode_batch(reports_ids[:, 1:].cpu().numpy())
                 val_res.extend(reports)
@@ -219,10 +228,13 @@ class Trainer(BaseTrainer):
         self.model.eval()
         with torch.no_grad():
             test_gts, test_res = [], []
-            for batch_idx, (images_id, images, reports_ids, reports_masks) in enumerate(self.test_dataloader):
-                images, reports_ids, reports_masks = images.to(self.device), reports_ids.to(
-                    self.device), reports_masks.to(self.device)
-                output = self.model(images, mode='sample')
+            for batch_idx, batch in enumerate(self.test_dataloader):
+                images = batch[1].to(self.device)
+                reports_ids = batch[2].to(self.device)
+                reports_masks = batch[3].to(self.device)
+                note_ids = batch[4].to(self.device) if len(batch) > 4 else None
+                note_masks = batch[5].to(self.device) if len(batch) > 5 else None
+                output, _ = self.model(images, reports_ids=None, note_ids=note_ids, note_mask=note_masks, mode='sample')
                 reports = self.model.tokenizer.decode_batch(output.cpu().numpy())
                 ground_truths = self.model.tokenizer.decode_batch(reports_ids[:, 1:].cpu().numpy())
                 test_res.extend(reports)
