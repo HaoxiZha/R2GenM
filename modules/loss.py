@@ -16,7 +16,11 @@ class LanguageModelCriterion(nn.Module):
         return output
 
 
-def compute_loss(output, reports_ids, reports_masks):
+def compute_loss(output, reports_ids, reports_masks, cls_logits=None, labels=None, lambda_cls=1.0):
+    """Compute generation loss and optional classification loss."""
     criterion = LanguageModelCriterion()
     loss = criterion(output, reports_ids[:, 1:], reports_masks[:, 1:]).mean()
+    if cls_logits is not None and labels is not None:
+        bce = nn.BCEWithLogitsLoss()(cls_logits, labels)
+        loss = loss + lambda_cls * bce
     return loss

@@ -116,19 +116,29 @@ class Decoder(nn.Module):
 
 
 class DecoderLayer(nn.Module):
-    def __init__(self, d_model, self_attn, src_attn, feed_forward, dropout, rm_num_slots, rm_d_model):
+    def __init__(self, d_model, self_attn, src_attn, feed_forward, dropout, rm_num_slots, rm_d_model, use_adapter=False, adapter_dim=64):
         super(DecoderLayer, self).__init__()
         self.d_model = d_model
         self.self_attn = self_attn
         self.src_attn = src_attn
         self.feed_forward = feed_forward
         self.sublayer = clones(ConditionalSublayerConnection(d_model, dropout, rm_num_slots, rm_d_model), 3)
-
+        self.use_adapter = use_adapter
+        if use_adapter:
+            self.adapter = nn.Sequential(
+                nn.Linear(d_model, adapter_dim),
+                nn.ReLU(inplace=True),
+                nn.Linear(adapter_dim, d_model),
+            )
+        
     def forward(self, x, hidden_states, src_mask, tgt_mask, memory):
         m = hidden_states
         x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, tgt_mask), memory)
         x = self.sublayer[1](x, lambda x: self.src_attn(x, m, m, src_mask), memory)
-        return self.sublayer[2](x, self.feed_forward, memory)
+        x = self.sublayer[2](x, self.feed_forward, memory)
+        if self.use_adapter:
+            x = x + self.adapter(x)
+        return x
 
 
 class ConditionalSublayerConnection(nn.Module):
@@ -311,7 +321,17 @@ class EncoderDecoder(AttModel):
         model = Transformer(
             Encoder(EncoderLayer(self.d_model, c(attn), c(ff), self.dropout), self.num_layers),
             Decoder(
-                DecoderLayer(self.d_model, c(attn), c(attn), c(ff), self.dropout, self.rm_num_slots, self.rm_d_model),
+                DecoderLayer(
+                    self.d_model,
+                    c(attn),
+                    c(attn),
+                    c(ff),
+                    self.dropout,
+                    self.rm_num_slots,
+                    self.rm_d_model,
+                    use_adapter=self.use_adapter,
+                    adapter_dim=self.adapter_dim,
+                ),
                 self.num_layers),
             lambda x: x,
             nn.Sequential(Embeddings(self.d_model, tgt_vocab), c(position)),
@@ -332,6 +352,8 @@ class EncoderDecoder(AttModel):
         self.rm_num_slots = args.rm_num_slots
         self.rm_num_heads = args.rm_num_heads
         self.rm_d_model = args.rm_d_model
+        self.use_adapter = getattr(args, 'use_adapter', False)
+        self.adapter_dim = getattr(args, 'adapter_dim', 64)
 
         tgt_vocab = self.vocab_size + 1
 
