@@ -1,44 +1,40 @@
 # R2Gen
 
-This is the implementation of [Generating Radiology Reports via Memory-driven Transformer](https://arxiv.org/pdf/2010.16056.pdf) at EMNLP-2020.
-
-## Citations
-
-If you use or extend our work, please cite our paper at EMNLP-2020.
-```
-@inproceedings{chen-emnlp-2020-r2gen,
-    title = "Generating Radiology Reports via Memory-driven Transformer",
-    author = "Chen, Zhihong and
-      Song, Yan  and
-      Chang, Tsung-Hui and
-      Wan, Xiang",
-    booktitle = "Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing",
-    month = nov,
-    year = "2020",
-}
-```
+R2Gen implements the model described in ["Generating Radiology Reports via Memory-driven Transformer"](https://arxiv.org/pdf/2010.16056.pdf) (EMNLP 2020). It provides tools to train the model on common radiology datasets and reproduce the results from the paper.
 
 ## Requirements
-
 - `torch==1.5.1`
 - `torchvision==0.6.1`
 - `opencv-python==4.4.0.42`
 
-
-## Download R2Gen
-You can download the models we trained for each dataset from [here](https://github.com/cuhksz-nlp/R2Gen/blob/main/data/r2gen.md).
+## Pretrained Models
+Links to pretrained checkpoints for IU X-Ray and MIMIC-CXR can be found in [data/r2gen.md](data/r2gen.md).
 
 ## Datasets
-We use two datasets (IU X-Ray and MIMIC-CXR) in our paper.
+This repository supports two datasets:
 
-For `IU X-Ray`, you can download the dataset from [here](https://drive.google.com/file/d/1c0BXEuDy8Cmm2jfN0YYGkQxFZd2ZIoLg/view?usp=sharing) and then put the files in `data/iu_xray`.
+- **IU X-Ray** – download the data from [Google Drive](https://drive.google.com/file/d/1c0BXEuDy8Cmm2jfN0YYGkQxFZd2ZIoLg/view?usp=sharing) and place the files under `data/iu_xray/`.
+- **MIMIC-CXR** – download the data from [Google Drive](https://drive.google.com/file/d/1DS6NYirOXQf8qYieSVMvqNwuOlgAbM_E/view?usp=sharing) and place the files under `data/mimic_cxr/`.
 
-For `MIMIC-CXR`, you can download the dataset from [here](https://drive.google.com/file/d/1DS6NYirOXQf8qYieSVMvqNwuOlgAbM_E/view?usp=sharing) and then put the files in `data/mimic_cxr`.
+## Training
+Use the provided scripts to train R2Gen:
 
-## Run on IU X-Ray
+```bash
+bash run_iu_xray.sh    # Train on IU X-Ray
+bash run_mimic_cxr.sh  # Train on MIMIC-CXR
+```
 
-Run `bash run_iu_xray.sh` to train a model on the IU X-Ray data.
+Each script calls `main.py` with the recommended parameters. Feel free to modify them to experiment with different settings.
 
-## Run on MIMIC-CXR
+## Citation
+If you use this code, please cite:
 
-Run `bash run_mimic_cxr.sh` to train a model on the MIMIC-CXR data.
+```text
+@inproceedings{chen-emnlp-2020-r2gen,
+    title = "Generating Radiology Reports via Memory-driven Transformer",
+    author = "Chen, Zhihong and Song, Yan and Chang, Tsung-Hui and Wan, Xiang",
+    booktitle = "Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing",
+    month = nov,
+    year = "2020"
+}
+```
